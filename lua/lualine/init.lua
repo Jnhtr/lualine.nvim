@@ -101,32 +101,6 @@ local function get_extension_sections()
   return nil
 end
 
-local function status_dispatch()
-  -- disable on specific filetypes
-  local current_ft = vim.api.nvim_buf_get_option(
-                         vim.fn.winbufnr(vim.g.statusline_winid), 'filetype')
-  for _, ft in pairs(config.options.disabled_filetypes) do
-    if ft == current_ft then
-      vim.wo.statusline = ''
-      return ''
-    end
-  end
-  local extension_sections = get_extension_sections()
-  if vim.g.statusline_winid == vim.fn.win_getid() then
-    if extension_sections ~= nil then
-      return statusline(extension_sections, true)
-    end
-    return statusline(config.sections, true)
-  else
-    if extension_sections ~= nil then
-      return statusline(extension_sections, false)
-    end
-    return statusline(config.inactive_sections, false)
-  end
-end
-
-local function tabline() return statusline(config.tabline, true) end
-
 local function setup_theme()
   local async_loader
   async_loader = vim.loop.new_async(vim.schedule_wrap(
@@ -177,20 +151,46 @@ local function set_statusline()
   end
 end
 
-local function setup(user_config)
-  if user_config then
-    config_module.apply_configuration(user_config)
-  elseif vim.g.lualine then
-    vim.schedule(function()
-      vim.api.nvim_err_writeln(
-          [[Lualine: lualine will stop supporting vimscript soon, change your config to lua or wrap it around lua << EOF ... EOF]]) -- luacheck: ignore
-    end)
-    config_module.apply_configuration(vim.g.lualine)
-  end
-  setup_theme()
-  loader.load_all(config)
-  set_statusline()
-  set_tabline()
-end
+return {
+  setup = function(user_config)
+    if user_config then
+      config_module.apply_configuration(user_config)
+    elseif vim.g.lualine then
+      vim.schedule(function()
+        vim.api.nvim_err_writeln(
+            [[Lualine: lualine will stop supporting vimscript soon, change your config to lua or wrap it around lua << EOF ... EOF]]) -- luacheck: ignore
+      end)
+      config_module.apply_configuration(vim.g.lualine)
+    end
+    setup_theme()
+    loader.load_all(config)
+    set_statusline()
+    set_tabline()
+  end,
 
-return {setup = setup, statusline = status_dispatch, tabline = tabline}
+  statusline = function()
+    -- disable on specific filetypes
+    local current_ft = vim.api.nvim_buf_get_option(
+                           vim.fn.winbufnr(vim.g.statusline_winid), 'filetype')
+    for _, ft in pairs(config.options.disabled_filetypes) do
+      if ft == current_ft then
+        vim.wo.statusline = ''
+        return ''
+      end
+    end
+    local extension_sections = get_extension_sections()
+    if vim.g.statusline_winid == vim.fn.win_getid() then
+      if extension_sections ~= nil then
+        return statusline(extension_sections, true)
+      end
+      return statusline(config.sections, true)
+    else
+      if extension_sections ~= nil then
+        return statusline(extension_sections, false)
+      end
+      return statusline(config.inactive_sections, false)
+    end
+  end,
+
+  tabline = function() return statusline(config.tabline, true) end
+}

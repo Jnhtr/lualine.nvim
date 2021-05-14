@@ -44,23 +44,17 @@ local function load_sections(sections, options)
   async_loader:send()
 end
 
-local function load_components(config)
-  load_sections(config.sections, config.options)
-  load_sections(config.inactive_sections, config.options)
-  load_sections(config.tabline, config.options)
-end
-
-local function load_extensions(config)
-  for index, extension in pairs(config.extensions) do
-    local local_extension = require('lualine.extensions.' .. extension)
-    load_sections(local_extension.sections, config.options)
-    config.extensions[index] = local_extension
+return {
+  load_all = function(config)
+    -- load components
+    load_sections(config.sections, config.options)
+    load_sections(config.inactive_sections, config.options)
+    load_sections(config.tabline, config.options)
+    -- load extensions
+    for index, extension in pairs(config.extensions) do
+      local local_extension = require('lualine.extensions.' .. extension)
+      load_sections(local_extension.sections, config.options)
+      config.extensions[index] = local_extension
+    end
   end
-end
-
-local function load_all(config)
-  load_components(config)
-  load_extensions(config)
-end
-
-return {load_all = load_all}
+}
